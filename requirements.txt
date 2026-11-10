@@ -5,3 +5,5 @@ torch>=2.2
 transformers>=4.40,<5
 sentencepiece>=0.2
 numpy>=1.26
+python-docx>=1.1,<2
+reportlab>=4,<5

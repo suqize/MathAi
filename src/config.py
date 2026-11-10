@@ -56,6 +56,8 @@ def provider_models(provider: dict[str, Any]) -> list[str]:
         if choices:
             return choices
     model = provider.get("model")
+    if isinstance(model, list):
+        return [item.strip() for item in model if isinstance(item, str) and item.strip()]
     if isinstance(model, str) and model.strip():
         return [model.strip()]
     return []
@@ -79,6 +81,8 @@ def save_provider_selection(provider_name: str, model: str) -> None:
         raise ConfigError(f"配置文件中找不到平台：{provider_name}")
     if model not in provider_models(provider):
         raise ConfigError(f"模型 {model} 未配置在平台 {provider_name} 的模型列表中。")
+    if "models" not in provider and isinstance(provider.get("model"), list):
+        provider["models"] = provider_models(provider)
     config["active_provider"] = provider_name
     provider["model"] = model
     temporary = CONFIG_PATH.with_name("config.tmp")

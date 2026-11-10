@@ -32,7 +32,8 @@ header[data-testid="stHeader"]{background:transparent} #MainMenu,footer{visibili
 .section-title{font-size:.9rem;font-weight:700;margin:0 0 .75rem;display:flex;align-items:center;gap:.5rem}
 .panel{background:white;border:1px solid var(--line);border-radius:16px;padding:1rem 1.15rem;margin-bottom:.9rem}
 .metric{background:white;border:1px solid var(--line);border-radius:14px;padding:1rem 1.1rem}.metric-label{font-size:.76rem;color:var(--muted)}.metric-value{font-size:1.45rem;font-weight:700;margin-top:.35rem}
-.step-card{background:white;border:1px solid var(--line);border-radius:14px;padding:1rem 1.15rem;margin:.6rem 0}
+.steps-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:.85rem;align-items:start;margin:.8rem 0 1.2rem}
+.step-card{background:white;border:1px solid var(--line);border-radius:14px;padding:1rem 1.15rem;margin:0;min-width:0;break-inside:avoid}
 .step-head{display:flex;justify-content:space-between;gap:.6rem;align-items:center}.step-label{font-weight:700;font-size:.87rem}.status{font-size:.72rem;font-weight:700;border-radius:99px;padding:.3rem .62rem}
 .correct{background:#e7f4ec;color:#27714b}.questionable{background:#fff3da;color:#986814}.incorrect{background:#fde9e7;color:#a9443c}.unsupported{background:#edf0f2;color:#5c6870}
 .step-body{font-size:.9rem;line-height:1.65;margin:.6rem 0;color:#27322e}.feedback{font-size:.83rem;color:#56645d;line-height:1.65}.confidence{font-size:.74rem;color:var(--muted);margin-top:.45rem}
@@ -121,32 +122,50 @@ def _show_results(result: dict[str, Any], image: Any | None) -> None:
     st.dataframe(pd.DataFrame(probability_rows), hide_index=True, use_container_width=True)
     if missing_probabilities:
         st.caption("部分步骤未返回完整的七类概率分布；表格以“—”标出，未使用估算值补齐。")
-    left, right = st.columns([1.05, .95], gap="large")
+    st.markdown('<div class="section-title">▤ 步骤分析</div>', unsafe_allow_html=True)
+    cards = []
+    for step in steps:
+        status = step["status"]
+        title = escape(step.get("status_detail", STATUS_TEXT.get(status, "存疑")))
+        cards.append(
+            f'''<div class="step-card"><div class="step-head"><span class="step-label">步骤 {step['index']} · {escape(step['logic_role'] or '解答步骤')}</span><span class="status {status}">{title}</span></div><div class="step-body">{escape(step['text'])}</div><div class="feedback">{escape(step['feedback'])}</div><div class="confidence">置信度 {step['confidence']:.0%}　{escape(step['reasoning'])}</div></div>'''
+        )
+    st.markdown('<div class="steps-grid">' + "".join(cards) + "</div>", unsafe_allow_html=True)
+
+    heatmap = _overlay(image, steps) if image is not None else None
+    left, right = st.columns([1, 1], gap="large")
     with left:
-        st.markdown('<div class="section-title">▤ 步骤分析</div>', unsafe_allow_html=True)
-        for step in steps:
-            status = step["status"]
-            title = step.get("status_detail", STATUS_TEXT.get(status, "存疑"))
-            body = f'''<div class="step-card"><div class="step-head"><span class="step-label">步骤 {step['index']} · {escape(step['logic_role'] or '解答步骤')}</span><span class="status {status}">{title}</span></div><div class="step-body">{escape(step['text'])}</div><div class="feedback">{escape(step['feedback'])}</div><div class="confidence">置信度 {step['confidence']:.0%}　{escape(step['reasoning'])}</div></div>'''
-            st.markdown(body, unsafe_allow_html=True)
         links = result.get("logic_links", [])
         if links:
             st.markdown('<div class="section-title">↗ 步骤逻辑关系</div>', unsafe_allow_html=True)
             for link in links:
                 st.markdown(f"- 步骤 {link.get('from','?')} → 步骤 {link.get('to','?')}：{link.get('relation','推导')} · {link.get('label','')}")
-    with right:
-        st.markdown('<div class="section-title">⌖ 图文区域关联</div>', unsafe_allow_html=True)
-        if image:
-            st.image(_overlay(image, steps), use_container_width=True)
-        else:
-            st.markdown('<div class="panel">未上传题目图片，当前仅依据文字批改。</div>', unsafe_allow_html=True)
         notes = result.get("review_notes", [])
         if notes:
             st.markdown('<div class="section-title">⚑ 复核提醒</div>', unsafe_allow_html=True)
             for note in notes:
                 st.markdown(f'<div class="note">{escape(str(note))}</div>', unsafe_allow_html=True)
-    st.download_button("下载批改报告 JSON", json.dumps(result, ensure_ascii=False, indent=2),
-                       file_name="math_grading_report.json", mime="application/json")
+    with right:
+        st.markdown('<div class="section-title">⌖ 图文区域关联热力图</div>', unsafe_allow_html=True)
+        if heatmap is not None:
+            st.image(heatmap, use_container_width=True)
+        else:
+            st.markdown('<div class="panel">未上传题目图片，当前仅依据文字批改。</div>', unsafe_allow_html=True)
+
+    from src.report_export import build_pdf_report, build_word_report
+    word_report = build_word_report(result.get("question", ""), result, image, heatmap)
+    pdf_report = build_pdf_report(result.get("question", ""), result, image, heatmap)
+    export_word, export_pdf, export_json = st.columns(3)
+    export_word.download_button("导出 Word 报告", word_report,
+                                file_name="math_grading_report.docx",
+                                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                use_container_width=True)
+    export_pdf.download_button("导出 PDF 报告", pdf_report,
+                               file_name="math_grading_report.pdf", mime="application/pdf",
+                               use_container_width=True)
+    export_json.download_button("导出 JSON", json.dumps(result, ensure_ascii=False, indent=2),
+                                file_name="math_grading_report.json", mime="application/json",
+                                use_container_width=True)
 
 
 def _show_patent_example(sample: dict[str, Any]) -> None:
@@ -214,7 +233,7 @@ def render_page(grader: Callable[..., dict[str, Any]], error_type: type[Exceptio
         config = None
         providers = {}
         selected_provider = None
-        model = MODEL
+        model = ""
 
     with st.sidebar:
         st.markdown("### MathVision")
@@ -296,6 +315,7 @@ def render_page(grader: Callable[..., dict[str, Any]], error_type: type[Exceptio
                         result = grader(question, steps, image_bytes=image_bytes,
                                         image_mime=uploaded.type if uploaded else "image/png",
                                         model=model.strip(), provider_name=selected_provider)
+                        result["question"] = question
                         st.session_state["grading_result"] = result
                         st.session_state["grading_image"] = image
                     except error_type:

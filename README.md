@@ -10,7 +10,9 @@
 
 应用从项目根目录的 `config.json` 读取当前平台。首次配置时，将 `config.example.json` 复制为 `config.json`，再填写 API 密钥。密钥只存放在本地配置文件，该文件已加入 `.gitignore`。
 
-配置结构使用 OpenAI 兼容格式。需要接入其他兼容平台时，在 `providers` 中增加平台配置并将 `active_provider` 设置为对应名称：
+侧栏可选择 `config.json` 中配置的平台和模型；`active_provider` 是页面默认选项。每个平台支持单个 `model`，也可配置 `models` 数组供页面选择。配置结构使用 OpenAI 兼容格式：
+
+用户界面默认只显示“设置”按钮。输入管理密码解锁后，才可切换平台/模型并保存为默认项；点击“锁定”或关闭设置会重新隐藏选项。管理密码以 SHA-256 哈希保存在本地 `config.json` 的 `settings_password_hash` 字段中，不保存明文。新部署时可用 `python -c "import hashlib; print(hashlib.sha256('你的密码'.encode()).hexdigest())"` 生成哈希并填入该字段。
 
 ```json
 {
@@ -45,3 +47,6 @@ Streamlit 端口固定配置在 `.streamlit/config.toml`，启动后访问 `http
 ## 模型训练
 
 多模态训练基线、JSONL 标注格式、训练参数和启动命令见 [training/README.md](training/README.md)。训练依赖单独安装：先依据设备选择匹配的 PyTorch/torchvision，再安装 `requirements-training.txt`。
+
+## 当前密钥
+管理密码明文: eAjHNuWOI1JvxU63aeVz5kgo

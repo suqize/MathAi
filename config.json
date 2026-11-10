@@ -7,6 +7,14 @@
       "base_url": "http://172.0.163.111:4000/v1",
       "api_key": "sk-oqoUZB6xzM_ZnUEBVNQ8CQ",
       "model": "XAI@CCNU/Qwen3-Omni-30B"
+    },
+    "myModel": {
+      "display_name": "myModel",
+      "api_style": "openai_compatible",
+      "base_url": "https://linkapi.ai/v1",
+      "api_key": "sk-YcYcIUFAmeeFhjyPu73QeXRS698VV3nBtXk8gNNRqJpUFrzl",
+      "model": "gpt-5.6-luna"
     }
-  }
+  },
+  "settings_password_hash": "70dd7246e9947740a0cb28aaac9b126e22c23a9fbe3fb89f518014c76c9416d1"
 }

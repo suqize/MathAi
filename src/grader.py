@@ -10,7 +10,7 @@ from typing import Any
 from openai import OpenAI
 from openai import DefaultHttpxClient
 
-from src.config import ConfigError, get_active_provider
+from src.config import ConfigError, get_provider, provider_models
 
 STATUSES = {"correct", "questionable", "incorrect", "unsupported"}
 STATUS_TEXT = {"correct": "正确", "questionable": "存疑", "incorrect": "错误", "unsupported": "缺少依据"}
@@ -40,16 +40,18 @@ def _parse_json(content: str) -> dict[str, Any]:
 
 
 def grade_solution(question: str, steps: list[str], image_bytes: bytes | None = None,
-                   image_mime: str = "image/png", model: str | None = None) -> dict[str, Any]:
+                   image_mime: str = "image/png", model: str | None = None,
+                   provider_name: str | None = None) -> dict[str, Any]:
     """Grade ordered student steps using the configured OpenAI-compatible vision API."""
     try:
-        provider_name, provider = get_active_provider()
+        _, provider = get_provider(provider_name)
     except ConfigError as exc:
         raise GraderError(str(exc)) from exc
     if not question.strip() or not steps:
         raise GraderError("请填写题目内容并至少提供一个解答步骤。")
 
-    selected_model = (model or provider["model"]).strip()
+    configured_models = provider_models(provider)
+    selected_model = (model or configured_models[0]).strip()
     client = OpenAI(base_url=provider["base_url"].strip(), api_key=provider["api_key"].strip(),
                     http_client=DefaultHttpxClient(trust_env=False), timeout=120)
     prompt = f'''你是一位严谨、友善的中学几何解答批改助手。根据题目、学生解答步骤和（如有）题图逐步批改。

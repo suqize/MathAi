@@ -9,7 +9,13 @@ from typing import Any, Callable
 
 import streamlit as st
 
-from src.config import ConfigError, get_active_provider
+from src.config import (
+    ConfigError,
+    load_config,
+    provider_models,
+    save_provider_selection,
+    verify_settings_password,
+)
 from src.patent_example import load_patent_example
 
 CSS = """
@@ -194,17 +200,70 @@ def render_page(grader: Callable[..., dict[str, Any]], error_type: type[Exceptio
     sample_input = sample["input"]
     st.markdown(CSS, unsafe_allow_html=True)
     st.markdown('''<div class="hero"><div><div class="eyebrow">MathVision · AI Geometry Review</div><h1>几何解答步骤批改</h1><p>结合题目图像与推理过程，逐步检查解答并生成可解释反馈。</p></div><div class="badge">● MathVision 智能评估模型</div></div>''', unsafe_allow_html=True)
+    try:
+        config = load_config()
+        providers = config["providers"]
+        selected_provider = st.session_state.get("selected_provider", config["active_provider"])
+        if selected_provider not in providers:
+            selected_provider = config["active_provider"]
+        model_options = provider_models(providers[selected_provider])
+        model = st.session_state.get("selected_model", providers[selected_provider].get("model", model_options[0]))
+        if model not in model_options:
+            model = model_options[0]
+    except (ConfigError, IndexError):
+        config = None
+        providers = {}
+        selected_provider = None
+        model = MODEL
+
     with st.sidebar:
-        st.markdown("### MathVision 智能评估")
-        try:
-            _, provider = get_active_provider()
-            model = provider["model"]
-            st.caption("逐步分析几何推理、条件使用与图文一致性。")
-        except ConfigError:
-            model = MODEL
-            st.caption("智能评估服务暂不可用，请联系系统维护人员。")
-        st.markdown("---")
-        st.caption("提供步骤判定、反馈建议与图形关联分析。")
+        st.markdown("### MathVision")
+        if st.button("⚙ 设置", use_container_width=True, key="toggle_settings"):
+            st.session_state["settings_open"] = not st.session_state.get("settings_open", False)
+            if not st.session_state["settings_open"]:
+                st.session_state["settings_unlocked"] = False
+
+        if st.session_state.get("settings_open", False):
+            st.markdown("---")
+            if not st.session_state.get("settings_unlocked", False):
+                with st.form("settings_password_form"):
+                    password = st.text_input("管理密码", type="password")
+                    submitted = st.form_submit_button("解锁设置", use_container_width=True)
+                if submitted:
+                    try:
+                        if verify_settings_password(password):
+                            st.session_state["settings_unlocked"] = True
+                            st.rerun()
+                        st.error("密码不正确。")
+                    except ConfigError:
+                        st.error("设置配置不可用，请联系系统维护人员。")
+            elif config is not None:
+                provider_names = list(providers)
+                selected_provider = st.selectbox(
+                    "服务平台",
+                    provider_names,
+                    index=provider_names.index(selected_provider),
+                    format_func=lambda name: providers[name].get("display_name", name),
+                )
+                selected_provider_config = providers[selected_provider]
+                model_options = provider_models(selected_provider_config)
+                prior_model = st.session_state.get("selected_model", selected_provider_config.get("model"))
+                model_index = model_options.index(prior_model) if prior_model in model_options else 0
+                model = st.selectbox("模型", model_options, index=model_index)
+                st.session_state["selected_provider"] = selected_provider
+                st.session_state["selected_model"] = model
+                save_col, lock_col = st.columns(2)
+                if save_col.button("保存", use_container_width=True, key="save_provider_selection"):
+                    try:
+                        save_provider_selection(selected_provider, model)
+                        st.success("设置已保存。")
+                    except ConfigError as exc:
+                        st.error(str(exc))
+                if lock_col.button("锁定", use_container_width=True, key="lock_settings"):
+                    st.session_state["settings_unlocked"] = False
+                    st.rerun()
+            else:
+                st.error("模型设置暂不可用。")
     col_input, col_result = st.columns([.9, 1.1], gap="large")
     with col_input:
         st.markdown('<div class="section-title">01　题目与作答</div>', unsafe_allow_html=True)
@@ -235,7 +294,8 @@ def render_page(grader: Callable[..., dict[str, Any]], error_type: type[Exceptio
                     try:
                         image_bytes = uploaded.getvalue() if uploaded else Path(sample_input["image"]).read_bytes()
                         result = grader(question, steps, image_bytes=image_bytes,
-                                        image_mime=uploaded.type if uploaded else "image/png", model=model.strip())
+                                        image_mime=uploaded.type if uploaded else "image/png",
+                                        model=model.strip(), provider_name=selected_provider)
                         st.session_state["grading_result"] = result
                         st.session_state["grading_image"] = image
                     except error_type:

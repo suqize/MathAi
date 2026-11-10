@@ -1,5 +1,4 @@
 # Local credentials and runtime files
-config.json
 .env
 .venv/
 __pycache__/

@@ -1,0 +1,20 @@
+{
+  "train_manifest": "../data/train.jsonl",
+  "val_manifest": "../data/val.jsonl",
+  "output_dir": "checkpoints/geometry_grader",
+  "text_encoder": "roberta-base",
+  "feedback_model": "t5-base",
+  "pretrained_vision": true,
+  "freeze_vision": false,
+  "device": "auto",
+  "seed": 42,
+  "epochs": 10,
+  "batch_size": 2,
+  "num_workers": 0,
+  "learning_rate": 0.00002,
+  "weight_decay": 0.01,
+  "max_grad_norm": 1.0,
+  "max_question_length": 256,
+  "max_step_length": 128,
+  "max_feedback_length": 128
+}

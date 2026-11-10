@@ -1,0 +1,42 @@
+{
+  "source_document": "docs/pgps9k_patent_example.docx",
+  "input": {
+    "question": "在△RST中，点Z是三角形的重心，u、v、w是中点，已知RZ=18，求SZ的长度。",
+    "image": "imgs/image1.png",
+    "heatmap_image": "imgs/image2.png",
+    "steps": [
+      "因为Z是△RST的重心，且S、Z、U三点共线，所以SU是△RST的一条中线。",
+      "根据三角形重心的性质，重心将中线按照2∶1分割，因此SZ＝2×ZU。",
+      "由图可知ZU＝14，所以SZ＝2×14＝28。"
+    ]
+  },
+  "expected_output": {
+    "summary": "S1、S2推理正确；S3发生图形条件误读，进而导致最终答案由正确的10变成28。建议回看图中RW＝14与ZU＝5两个标注，保持第二步推导不变，并重新代入ZU的正确长度。",
+    "steps": [
+      {
+        "index": 1,
+        "status": "步骤正确",
+        "confidence": 0.94,
+        "probabilities": {"步骤正确": 0.94, "计算错误": 0.01, "定理误用": 0.01, "逻辑跳跃": 0.01, "条件误读": 0.01, "步骤冗余": 0.01, "步骤缺失": 0.01},
+        "feedback": "已正确利用“Z是△RST的重心”以及S、Z、U共线的条件，判断SU为三角形RST的一条中线。无需修改本步骤。",
+        "overlay": "original"
+      },
+      {
+        "index": 2,
+        "status": "步骤正确",
+        "confidence": 0.91,
+        "probabilities": {"步骤正确": 0.91, "计算错误": 0.01, "定理误用": 0.02, "逻辑跳跃": 0.02, "条件误读": 0.01, "步骤冗余": 0.02, "步骤缺失": 0.01},
+        "feedback": "正确应用三角形重心把中线按2∶1分割的性质，得到SZ＝2×ZU；该推理关系成立。",
+        "overlay": "original"
+      },
+      {
+        "index": 3,
+        "status": "条件误读",
+        "confidence": 0.92,
+        "probabilities": {"步骤正确": 0.02, "计算错误": 0.02, "定理误用": 0.01, "逻辑跳跃": 0.01, "条件误读": 0.92, "步骤冗余": 0.01, "步骤缺失": 0.01},
+        "feedback": "该步骤将图中RW附近的长度14误认为ZU的长度。实际上图中ZU标注为5，因此不能代入ZU＝14。沿用S2中的正确关系，应得SZ＝2×5＝10。",
+        "overlay": "heatmap"
+      }
+    ]
+  }
+}

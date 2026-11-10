@@ -1,0 +1,12 @@
+{
+  "active_provider": "ccnu",
+  "providers": {
+    "ccnu": {
+      "display_name": "CCNU",
+      "api_style": "openai_compatible",
+      "base_url": "http://172.0.163.111:4000/v1",
+      "api_key": "填入你的 CCNU API Key",
+      "model": "XAI@CCNU/Qwen3-Omni-30B"
+    }
+  }
+}

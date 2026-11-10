@@ -1,0 +1,5 @@
+torch>=2.2,<3
+# Install torchvision matching the selected torch build/CUDA from the PyTorch install selector.
+transformers>=4.40,<5
+sentencepiece>=0.2
+numpy>=1.26

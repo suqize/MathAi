@@ -1,0 +1,8 @@
+# Local credentials and runtime files
+config.json
+.env
+.venv/
+__pycache__/
+# Training data and generated weights
+/data/
+/training/checkpoints/
